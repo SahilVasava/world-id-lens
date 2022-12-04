@@ -1,6 +1,7 @@
 import fs from 'fs'
 import ora from 'ora'
 import dotenv from 'dotenv'
+import fetch from 'node-fetch'
 import readline from 'readline'
 import { Wallet } from '@ethersproject/wallet'
 import { hexlify, concat } from '@ethersproject/bytes'
@@ -61,7 +62,12 @@ async function main() {
         data: hexlify(
             concat([
                 HumanCheck.bytecode.object,
-                abi.encode(HumanCheck.abi[0].inputs, [worldIDAddress, 1, await ask('Action ID: ')]),
+                abi.encode(HumanCheck.abi[0].inputs, [
+                    worldIDAddress,
+                    "0x7582177F9E536aB0b6c721e11f383C326F2Ad1D5",
+                    1,
+                    await ask('Action ID: '),
+                ]),
             ])
         ),
     })

@@ -3,9 +3,12 @@ pragma solidity ^0.8.10;
 
 import { ByteHasher } from 'world-id-contracts/libraries/ByteHasher.sol';
 import { IWorldID } from 'world-id-contracts/interfaces/IWorldID.sol';
+import { ILensProfile } from './test/mock/ILensProfile.sol';
 
 contract HumanCheck {
     using ByteHasher for bytes;
+
+    error NotOwnerLens(uint256 profileId);
 
     /// @notice Emitted when a profile is verified
     /// @param profileId The ID of the profile getting verified
@@ -24,6 +27,8 @@ contract HumanCheck {
     /// @dev The World ID Action ID
     uint256 internal immutable actionId;
 
+    ILensProfile public immutable lensProfile;
+
     /// @notice Whether a profile is verified
     /// @dev This also generates an `isVerified(uint256) getter
     mapping(uint256 => bool) public isVerified;
@@ -36,11 +41,13 @@ contract HumanCheck {
     /// @param _actionId The WorldID Action ID for the proofs
     constructor(
         IWorldID _worldId,
+        address _lensProfile,
         uint256 _groupId,
         string memory _actionId
     ) payable {
         worldId = _worldId;
         groupId = _groupId;
+        lensProfile = ILensProfile(_lensProfile);
         actionId = abi.encodePacked(_actionId).hashToField();
     }
 
@@ -63,6 +70,10 @@ contract HumanCheck {
             actionId,
             proof
         );
+
+        if (lensProfile.ownerOf(profileId) != msg.sender) {
+            revert NotOwnerLens(profileId);
+        }
 
         if (nullifierHashes[nullifierHash] != 0) {
             uint256 prevProfileId = nullifierHashes[nullifierHash];

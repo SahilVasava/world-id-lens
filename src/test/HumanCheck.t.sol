@@ -3,7 +3,8 @@ pragma solidity ^0.8.13;
 
 import { Test } from 'forge-std/Test.sol';
 import { HumanCheck } from '../HumanCheck.sol';
-import { LensProfile } from './mock/LensProfile.sol';
+import { LensProfile} from './mock/LensProfile.sol';
+import { ILensProfile } from './mock/ILensProfile.sol';
 import { TypeConverter } from './utils/TypeConverter.sol';
 import { Semaphore as WorldID } from 'world-id-contracts/Semaphore.sol';
 
@@ -25,7 +26,7 @@ contract HumanCheckTest is Test {
         user = new User();
         profile = new LensProfile();
         worldId = new WorldID();
-        verifier = new HumanCheck(worldId, 1, 'wid_staging_12345678');
+        verifier = new HumanCheck(worldId, address(profile), 1, 'wid_staging_12345678');
 
         vm.label(address(user), 'User');
         vm.label(address(this), 'Sender');
@@ -74,6 +75,21 @@ contract HumanCheckTest is Test {
         assertTrue(!verifier.isVerified(profileId));
         assertTrue(verifier.isVerified(profileId2));
     }
+    function testCannotVerifyIfNotOwner() public {
+        address alice = vm.addr(2);
+        uint256 profileId = profile.issue(alice);
+        assertTrue(!verifier.isVerified(profileId));
+
+        worldId.addMember(1, _genIdentityCommitment());
+        (uint256 nullifierHash, uint256[8] memory proof) = _genProof(profileId);
+        uint256 root = worldId.getRoot(1);
+
+        vm.expectRevert(abi.encodeWithSelector(HumanCheck.NotOwnerLens.selector, profileId));
+        verifier.verify(profileId, root, nullifierHash, proof);
+
+        assertTrue(!verifier.isVerified(profileId));
+    }
+
 
     function testCannotVerifyIfNotMember() public {
         uint256 profileId = profile.issue(address(this));
